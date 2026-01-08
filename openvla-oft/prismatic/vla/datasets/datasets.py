@@ -32,6 +32,8 @@ class RLDSBatchTransform:
     predict_stop_token: bool = True
     use_wrist_image: bool = False
     use_proprio: bool = False
+    use_subtrajectory: bool = False
+
 
     def __call__(self, rlds_batch: Dict[str, Any]) -> Dict[str, Any]:
         """Converts a RLDS batch to the format expected by the OpenVLA collator/models."""
@@ -87,6 +89,10 @@ class RLDSBatchTransform:
         if self.use_proprio and "proprio" in rlds_batch["observation"]:
             proprio = rlds_batch["observation"]["proprio"]
             return_dict["proprio"] = proprio
+        
+        if self.use_subtrajectory and "subtrajectory_id" in rlds_batch["observation"]:
+            subtraj_id = rlds_batch["observation"]["subtrajectory_id"]
+            return_dict["subtrajectory_id"] = subtraj_id
 
         return return_dict
 

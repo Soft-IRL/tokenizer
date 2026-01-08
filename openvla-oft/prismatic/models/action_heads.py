@@ -209,3 +209,30 @@ class DiffusionActionHead(nn.Module):
         # Get diffusion model's noise prediction.
         noise_pred = self.noise_predictor(rearranged_actions_hidden_states)
         return noise_pred
+
+
+class SubTrajectoryHead(nn.Module):
+    """Simple MLP-based action head that generates continuous actions via L1 regression."""
+    def __init__(
+        self,
+        input_dim=4096,
+        hidden_dim=4096,
+        num_subtrajectory_ids=128
+    ):
+        super().__init__()
+        self.subtrajectory_id_dim = num_subtrajectory_ids
+        self.norm = nn.LayerNorm(hidden_dim)
+        self.fc = nn.Linear(hidden_dim, num_subtrajectory_ids)
+
+    def predict_action(self, actions_hidden_states):
+        # actions_hidden_states: last hidden states of Transformer corresponding to action tokens in sequence
+        # - shape: (batch_size, chunk_len * action_dim, hidden_dim)
+        # ground_truth_actions: ground-truth actions
+        # - shape: (batch_size, chunk_len, action_dim)
+        batch_size = actions_hidden_states.shape[0]
+        rearranged_actions_hidden_states = actions_hidden_states.reshape(batch_size, NUM_ACTIONS_CHUNK, -1)
+        rearranged_actions_hidden_states.max(dim=1)  # Aggregate over action tokens in chunk (batch_size, hidden_dim) (independant of the number of actions per subtrajectory)
+        subjtrajectory_id = self.norm(rearranged_actions_hidden_states)
+        subjtrajectory_id = self.fc(subjtrajectory_id)
+
+        return subjtrajectory_id
