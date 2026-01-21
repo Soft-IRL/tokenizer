@@ -24,7 +24,7 @@ json_numpy.patch()
 from prismatic.extern.hf.configuration_prismatic import OpenVLAConfig
 from prismatic.extern.hf.modeling_prismatic import OpenVLAForActionPrediction
 from prismatic.extern.hf.processing_prismatic import PrismaticImageProcessor, PrismaticProcessor
-from prismatic.models.action_heads import DiffusionActionHead, L1RegressionActionHead
+from prismatic.models.action_heads import DiffusionActionHead, L1RegressionActionHead, SubTrajectoryHead
 from prismatic.models.film_vit_wrapper import FiLMedPrismaticVisionBackbone
 from prismatic.models.projectors import NoisyActionProjector, ProprioProjector
 from prismatic.vla.constants import (
@@ -461,7 +461,7 @@ def get_noisy_action_projector(cfg: Any, llm_dim: int) -> NoisyActionProjector:
     return noisy_action_projector
 
 
-def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead, DiffusionActionHead]:
+def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead, DiffusionActionHead,SubTrajectoryHead]:
     """
     Get action head for continuous value prediction.
 
@@ -486,6 +486,13 @@ def get_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionActionHead, Dif
         )
         # Set number of diffusion steps for inference
         action_head.noise_scheduler.set_timesteps(cfg.num_diffusion_steps_inference)
+    elif cfg.use_subtrajectory:
+        action_head = SubTrajectoryHead(
+            input_dim=llm_dim,
+            hidden_dim=llm_dim,
+            num_subtrajectory_ids=cfg.SUBTRAJECTORY_DIM,
+        )
+        
     else:
         raise ValueError("Either use_l1_regression or use_diffusion must be True")
 

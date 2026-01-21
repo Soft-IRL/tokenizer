@@ -170,6 +170,8 @@ def make_dataset_from_rlds(
         # add timestep info
         new_obs["timestep"] = tf.range(traj_len)
 
+        # new_obs["cluster_id"] = old_obs["cluster_id"]
+
         # extracts `language_key` into the "task" dict
         task = {}
         if language_key is not None:
@@ -178,7 +180,13 @@ def make_dataset_from_rlds(
                     f"Language key {language_key} has dtype {traj[language_key].dtype}, " "but it must be tf.string."
                 )
             task["language_instruction"] = traj.pop(language_key)
+        
+        # n=traj["action"]
+        
+        # print(f"ACTION keys: {n.shape}") #
+        # print(f"ACTION keys: {n.keys()}") #
 
+        new_obs["cluster_id"] = old_obs["cluster_id"]
         traj = {
             "observation": new_obs,
             "task": task,

@@ -90,8 +90,12 @@ class RLDSBatchTransform:
             proprio = rlds_batch["observation"]["proprio"]
             return_dict["proprio"] = proprio
         
-        if self.use_subtrajectory and "subtrajectory_id" in rlds_batch["observation"]:
-            subtraj_id = rlds_batch["observation"]["subtrajectory_id"]
+        if self.use_subtrajectory:            
+            # print("--- DEBUG 2: Inspecting Keys ---")
+            # print(f"Main keys: {rlds_batch.keys()}")
+            subtraj_id = rlds_batch["observation"]["cluster_id"]
+            # print(f"dimension cluster: {subtraj_id.shape}") # 
+
             return_dict["subtrajectory_id"] = subtraj_id
 
         return return_dict

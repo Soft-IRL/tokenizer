@@ -19,6 +19,7 @@ class NormalizationType(str, Enum):
     NORMAL = "normal"               # Normalize to Mean = 0, Stdev = 1
     BOUNDS = "bounds"               # Normalize to Interval = [-1, 1]
     BOUNDS_Q99 = "bounds_q99"       # Normalize [quantile_01, ..., quantile_99] --> [-1, ..., 1]
+    CLUSTER = "cluster"             # Cluster-based normalization
     # fmt: on
 
 

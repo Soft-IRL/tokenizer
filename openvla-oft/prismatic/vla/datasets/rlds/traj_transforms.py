@@ -49,6 +49,20 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
     # indicates whether an entire observation is padding
     traj["observation"]["pad_mask"] = chunk_indices >= 0
 
+    # Chunk cluster_id with actions (if it exists) so it has 8 chunks like actions
+    if "cluster_id" in traj["observation"]:
+        cluster_ids = traj["observation"]["cluster_id"]
+        
+        # Squeeze to rank 1 if cluster_ids is 2D (shape [T, 1])
+        if len(cluster_ids.shape) > 1:
+            cluster_ids = tf.squeeze(cluster_ids, axis=-1)
+        
+        # Pad with last value repeated 8 times (forward-fill instead of zeros)
+        # This ensures we can safely gather indices without going out of bounds
+        last_cluster_id = cluster_ids[-1:]  # shape [1]
+        padded_cluster_ids = tf.concat([cluster_ids, tf.repeat(last_cluster_id, 8)], axis=0)
+        traj["observation"]["cluster_id"] = tf.gather(padded_cluster_ids, floored_action_chunk_indices)
+
     # Truncate other elements of the trajectory dict
     traj["task"] = tf.nest.map_structure(lambda x: tf.gather(x, tf.range(effective_traj_len)), traj["task"])
     traj["dataset_name"] = tf.gather(traj["dataset_name"], tf.range(effective_traj_len))

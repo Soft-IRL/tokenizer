@@ -95,7 +95,7 @@ class L1RegressionActionHead(nn.Module):
             num_blocks=2, input_dim=input_dim*ACTION_DIM, hidden_dim=hidden_dim, output_dim=action_dim
         )
 
-    def predict_action(self, actions_hidden_states):
+    def ƒ(self, actions_hidden_states):
         # actions_hidden_states: last hidden states of Transformer corresponding to action tokens in sequence
         # - shape: (batch_size, chunk_len * action_dim, hidden_dim)
         # ground_truth_actions: ground-truth actions
@@ -217,22 +217,27 @@ class SubTrajectoryHead(nn.Module):
         self,
         input_dim=4096,
         hidden_dim=4096,
-        num_subtrajectory_ids=128
+        num_subtrajectory_ids=30
     ):
         super().__init__()
         self.subtrajectory_id_dim = num_subtrajectory_ids
-        self.norm = nn.LayerNorm(hidden_dim)
-        self.fc = nn.Linear(hidden_dim, num_subtrajectory_ids)
+        self.norm = nn.LayerNorm(hidden_dim*ACTION_DIM)
+        self.fc = nn.Linear(hidden_dim*ACTION_DIM, num_subtrajectory_ids)
 
     def predict_action(self, actions_hidden_states):
         # actions_hidden_states: last hidden states of Transformer corresponding to action tokens in sequence
         # - shape: (batch_size, chunk_len * action_dim, hidden_dim)
         # ground_truth_actions: ground-truth actions
         # - shape: (batch_size, chunk_len, action_dim)
+        self.to(actions_hidden_states.device).to(actions_hidden_states.dtype)
+        # print("\n=== DEBUG SUBTRAJECTORY HEAD ===")
+        # print(f"Entrée (actions_hidden_states) shape: {actions_hidden_states.shape}")
         batch_size = actions_hidden_states.shape[0]
         rearranged_actions_hidden_states = actions_hidden_states.reshape(batch_size, NUM_ACTIONS_CHUNK, -1)
-        rearranged_actions_hidden_states.max(dim=1)  # Aggregate over action tokens in chunk (batch_size, hidden_dim) (independant of the number of actions per subtrajectory)
+
         subjtrajectory_id = self.norm(rearranged_actions_hidden_states)
+        # print(f"Shape après norm : {subjtrajectory_id.shape}")
         subjtrajectory_id = self.fc(subjtrajectory_id)
+        # print(f"Shape sortie finale (logits) : {subjtrajectory_id.shape}")
 
         return subjtrajectory_id

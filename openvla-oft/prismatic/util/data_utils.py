@@ -136,6 +136,12 @@ class PaddedCollatorForActionPrediction:
         actions = [torch.from_numpy(np.copy(instance["actions"])) for instance in instances]
         actions = torch.stack(actions)
 
+        subtrajectory_id = None
+        if "subtrajectory_id" in instances[0]:
+            # On récupère les IDs, on s'assure qu'ils sont des tenseurs Long
+            subtrajectory_id = [torch.tensor(instance["subtrajectory_id"], dtype=torch.long) for instance in instances]
+            subtrajectory_id = torch.stack(subtrajectory_id)
+
         # Stack proprio
         if "proprio" in instances[0]:
             proprio = [instance["proprio"] for instance in instances]
@@ -150,6 +156,7 @@ class PaddedCollatorForActionPrediction:
             attention_mask=attention_mask,
             labels=labels,
             actions=actions,
+            subtrajectory_id=subtrajectory_id,
         )
         if dataset_names is not None:
             output["dataset_names"] = dataset_names

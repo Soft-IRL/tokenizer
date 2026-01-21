@@ -779,6 +779,8 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
         elif ACTION_PROPRIO_NORMALIZATION_TYPE == NormalizationType.BOUNDS_Q99:
             mask = action_norm_stats.get("mask", np.ones_like(action_norm_stats["q01"], dtype=bool))
             action_high, action_low = np.array(action_norm_stats["q99"]), np.array(action_norm_stats["q01"])
+        elif unnorm_key == NormalizationType.CLUSTER:
+            print("CLUSTER")
         else:
             raise ValueError("Unsupported action/proprio normalization type detected!")
 
@@ -919,10 +921,16 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
 
         # Handle different prediction methods
         if action_head is not None:
-            # L1 regression prediction
-            normalized_actions = action_head.predict_action(actions_hidden_states)
-            normalized_actions = normalized_actions.reshape(NUM_ACTIONS_CHUNK, ACTION_DIM)
-            normalized_actions = normalized_actions.float().cpu().detach().numpy()
+            if hasattr(action_head, 'subtrajectory_id_dim'):
+                # SubTrajectoryHead: return cluster ID predictions
+                logits = action_head.predict_action(actions_hidden_states)  # (B, NUM_ACTIONS_CHUNK, num_subtrajectory_ids)
+                cluster_ids = logits.argmax(dim=2)  # (B, NUM_ACTIONS_CHUNK) - take argmax over dimension 2
+                normalized_actions = cluster_ids.float().cpu().detach().numpy()  # Convert to numpy
+            else:
+                # L1 regression prediction
+                normalized_actions = action_head.predict_action(actions_hidden_states)
+                normalized_actions = normalized_actions.reshape(NUM_ACTIONS_CHUNK, ACTION_DIM)
+                normalized_actions = normalized_actions.float().cpu().detach().numpy()
         else:
             # Discrete token-based prediction
             predicted_action_token_ids = (
@@ -1052,8 +1060,13 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
                 action_head,
             )
 
-        # Unnormalize predicted actions
-        actions = self._unnormalize_actions(normalized_actions, unnorm_key)
+        # Only unnormalize if NOT using SubTrajectoryHead (cluster IDs don't need unnormalization)
+        is_subtrajectory = action_head is not None and hasattr(action_head, 'subtrajectory_id_dim')
+        if not is_subtrajectory:
+            actions = self._unnormalize_actions(normalized_actions, unnorm_key)
+        else:
+            # Cluster IDs are already in correct format, return as-is
+            actions = normalized_actions
 
         return actions, actions_hidden_states
 
