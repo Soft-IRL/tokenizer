@@ -82,5 +82,6 @@ variables/
 *~
 **/wandb/
 *runs/
+/openvla-oft/adapter-tmp/
 /test
 *.pkl
