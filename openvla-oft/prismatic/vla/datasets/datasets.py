@@ -46,13 +46,23 @@ class RLDSBatchTransform:
         prompt_builder = self.prompt_builder_fn("openvla")
 
         # Get future action chunk
+        print(f"--- DEBUG: action shape {actions.shape} ---")
         future_actions = rlds_batch["action"][1:]
+        # future_actions = future_actions[::ACTION_DIM]
+
+        print(f"--- DEBUG: future action shape {future_actions.shape} ---")
+        
         future_actions_string = ''.join(self.action_tokenizer(future_actions))
 
         # Get action chunk string
         current_action_string = self.action_tokenizer(current_action)
         action_chunk_string = current_action_string + future_actions_string
+        action_chunk_string = "".join([action_chunk_string[i : i + ACTION_DIM] for i in range(0, len(action_chunk_string), len(current_action_string))])
         action_chunk_len = len(action_chunk_string)
+        print(f"--- DEBUG: string current action shape {len(current_action_string)} ---")
+        print(f"--- DEBUG: string future action shape {len(future_actions_string)} ---")
+        print(f"--- DEBUG: string  action shape {len(action_chunk_string)} ---")
+
 
         conversation = [
             {"from": "human", "value": f"What action should the robot take to {lang}?"},
@@ -93,8 +103,8 @@ class RLDSBatchTransform:
         if self.use_subtrajectory:            
             # print("--- DEBUG 2: Inspecting Keys ---")
             # print(f"Main keys: {rlds_batch.keys()}")
-            subtraj_id = rlds_batch["observation"]["cluster_id"]
-            # print(f"dimension cluster: {subtraj_id.shape}") # 
+            subtraj_id = rlds_batch["cluster_id"]
+            print(f"dimension cluster: {subtraj_id.shape}") # 
 
             return_dict["subtrajectory_id"] = subtraj_id
 

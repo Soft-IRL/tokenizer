@@ -23,6 +23,9 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
     before the start of the trajectory).
     """
     traj_len = tf.shape(traj["action"])[0]
+    # tf.print(f"--- DEBUG: traj_len {traj_len} ---")
+    tf.print("--- DEBUG: traj_len", traj_len, "---")
+    tf.print("--- DEBUG: future_action_window_size", future_action_window_size, "---")
     action_dim = traj["action"].shape[-1]
     effective_traj_len = traj_len - future_action_window_size
     chunk_indices = tf.broadcast_to(tf.range(-window_size + 1, 1), [effective_traj_len, window_size]) + tf.broadcast_to(
@@ -50,23 +53,48 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
     traj["observation"]["pad_mask"] = chunk_indices >= 0
 
     # Chunk cluster_id with actions (if it exists) so it has 8 chunks like actions
-    if "cluster_id" in traj["observation"]:
-        cluster_ids = traj["observation"]["cluster_id"]
-        
-        # Squeeze to rank 1 if cluster_ids is 2D (shape [T, 1])
-        if len(cluster_ids.shape) > 1:
-            cluster_ids = tf.squeeze(cluster_ids, axis=-1)
-        
-        # Pad with last value repeated 8 times (forward-fill instead of zeros)
-        # This ensures we can safely gather indices without going out of bounds
-        last_cluster_id = cluster_ids[-1:]  # shape [1]
-        padded_cluster_ids = tf.concat([cluster_ids, tf.repeat(last_cluster_id, 8)], axis=0)
-        traj["observation"]["cluster_id"] = tf.gather(padded_cluster_ids, floored_action_chunk_indices)
+    if "cluster_id" in traj:
+        # cluster_ids = traj["cluster_id"]
+
+        # # Squeeze to rank 1 if cluster_ids is 2D (shape [T, 1])
+        # if len(cluster_ids.shape) > 1:
+        #     cluster_ids = tf.squeeze(cluster_ids, axis=-1)
+
+        # # Pad with last value repeated 8 times (forward-fill instead of zeros)
+        # # This ensures we can safely gather indices without going out of bounds
+        # last_cluster_id = cluster_ids[-1:]  # shape [1]
+        # padded_cluster_ids = tf.concat([cluster_ids, tf.repeat(last_cluster_id, future_action_window_size)], axis=0)
+        # traj["cluster_id"] = tf.gather(padded_cluster_ids, floored_action_chunk_indices)
+
+
+            # traj["observation"]["cluster_id"] = tf.gather(traj["observation"]["cluster_id"], floored_action_chunk_indices)
+        cluster_ids = traj["cluster_id"]
+        tf.print("--- DEBUG: traj_CLUSTERID_AVANT", tf.shape(traj["cluster_id"]), "---")
+
+        # 1. On garde la dimension originale (pas de squeeze !)
+        # cluster_ids a une forme [T, D]
+        # 2. On crée un padding physique pour être SÛR que les indices futurs existent
+        # On répète la dernière valeur 'future_action_window_size' fois
+        last_val = cluster_ids[-1:] # Forme [1, D]
+        padding = tf.repeat(last_val, future_action_window_size, axis=0)
+        padded_cluster_ids = tf.concat([cluster_ids, padding], axis=0)
+
+        # 3. Maintenant, on peut gather en toute sécurité
+        # On utilise action_chunk_indices (SANS le minimum/goal_timestep) 
+        # car on a physiquement agrandi le tenseur.
+        traj["cluster_id"] = tf.gather(padded_cluster_ids, tf.maximum(action_chunk_indices, 0))
+
+        # if tf.rank(traj["cluster_id"]) == 2:
+        #     traj["cluster_id"] = traj["cluster_id"][..., tf.newaxis]
 
     # Truncate other elements of the trajectory dict
     traj["task"] = tf.nest.map_structure(lambda x: tf.gather(x, tf.range(effective_traj_len)), traj["task"])
     traj["dataset_name"] = tf.gather(traj["dataset_name"], tf.range(effective_traj_len))
     traj["absolute_action_mask"] = tf.gather(traj["absolute_action_mask"], tf.range(effective_traj_len))
+    tf.print("--- DEBUG: traj_ACTION", tf.shape(traj["action"]), "---")
+    tf.print("--- DEBUG: traj_CLUSTERID_APRES", tf.shape(traj["cluster_id"]), "---")
+
+
 
     return traj
 

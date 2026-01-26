@@ -13,6 +13,7 @@ def get_current_action_mask(token_ids):
     cumsum = torch.cumsum(newline_positions, dim=1)
 
     # Create the mask
+    print(f"ACTION DIM MASK:{ACTION_DIM}")
     mask = (1 <= cumsum) & (cumsum <= ACTION_DIM)
 
     # Extract the action part only

@@ -734,6 +734,7 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
     def _prepare_input_for_action_prediction(self, input_ids, attention_mask):
         """Prepares input for action prediction by adding necessary tokens"""
         # Add (ACTION_DIM * NUM_ACTIONS_CHUNK) placeholder tokens to input_ids to simulate action tokens
+        print(f"Action Dim for preparing input: {ACTION_DIM}")
         placeholder_action_token_ids = (
             torch.ones((input_ids.shape[0], ACTION_DIM * NUM_ACTIONS_CHUNK)).to(input_ids.device).to(input_ids.dtype)
         )

@@ -211,8 +211,42 @@ class DiffusionActionHead(nn.Module):
         return noise_pred
 
 
+# class SubTrajectoryHead(nn.Module):
+#     """Simple MLP-based action head that generates continuous actions via L1 regression."""
+#     def __init__(
+#         self,
+#         input_dim=4096,
+#         hidden_dim=4096,
+#         num_subtrajectory_ids=30
+#     ):
+#         super().__init__()
+#         self.subtrajectory_id_dim = num_subtrajectory_ids
+#         self.norm = nn.LayerNorm(hidden_dim*ACTION_DIM)
+#         self.fc = nn.Linear(hidden_dim*ACTION_DIM, num_subtrajectory_ids)
+
+#     def predict_action(self, actions_hidden_states):
+#         # actions_hidden_states: last hidden states of Transformer corresponding to action tokens in sequence
+#         # - shape: (batch_size, chunk_len * action_dim, hidden_dim)
+#         # ground_truth_actions: ground-truth actions
+#         # - shape: (batch_size, chunk_len, action_dim)
+#         print(f"ACTION DIM:{ACTION_DIM}")
+#         print(f"CHUNK DIM:{NUM_ACTIONS_CHUNK}")
+#         self.to(actions_hidden_states.device).to(actions_hidden_states.dtype)
+#         # print("\n=== DEBUG SUBTRAJECTORY HEAD ===")
+#         print(f"Entrée (actions_hidden_states) shape: {actions_hidden_states.shape}")
+#         batch_size = actions_hidden_states.shape[0]
+#         rearranged_actions_hidden_states = actions_hidden_states.reshape(batch_size, NUM_ACTIONS_CHUNK, -1)
+#         print(f"Shape après reshape : {rearranged_actions_hidden_states.shape}")
+
+#         subjtrajectory_id = self.norm(rearranged_actions_hidden_states)
+#         print(f"Shape après norm : {subjtrajectory_id.shape}")
+#         subjtrajectory_id = self.fc(subjtrajectory_id)
+#         print(f"Shape sortie finale (logits) : {subjtrajectory_id.shape}")
+
+#         return subjtrajectory_id
+
 class SubTrajectoryHead(nn.Module):
-    """Simple MLP-based action head that generates continuous actions via L1 regression."""
+    """Simple MLP-based subtrajectory head that generates subtrajectory ID via cross validation."""
     def __init__(
         self,
         input_dim=4096,
@@ -220,24 +254,19 @@ class SubTrajectoryHead(nn.Module):
         num_subtrajectory_ids=30
     ):
         super().__init__()
-        self.subtrajectory_id_dim = num_subtrajectory_ids
-        self.norm = nn.LayerNorm(hidden_dim*ACTION_DIM)
-        self.fc = nn.Linear(hidden_dim*ACTION_DIM, num_subtrajectory_ids)
+        self.num_subtrajectory_ids = num_subtrajectory_ids
+        self.model = MLPResNet(
+            num_blocks=2, input_dim=input_dim*ACTION_DIM, hidden_dim=hidden_dim, output_dim=num_subtrajectory_ids
+        )
 
     def predict_action(self, actions_hidden_states):
-        # actions_hidden_states: last hidden states of Transformer corresponding to action tokens in sequence
-        # - shape: (batch_size, chunk_len * action_dim, hidden_dim)
-        # ground_truth_actions: ground-truth actions
-        # - shape: (batch_size, chunk_len, action_dim)
+        # actions_hidden_states: last hidden states of Transformer corresponding to subtraj tokens in sequence
+        # - shape: (batch_size, chunk_len * subtraj_dim, hidden_dim)
+        # ground_truth_subtraj ground-truth subtraj
+        # - shape: (batch_size, chunk_len, subtraj_dim)
         self.to(actions_hidden_states.device).to(actions_hidden_states.dtype)
-        # print("\n=== DEBUG SUBTRAJECTORY HEAD ===")
-        # print(f"Entrée (actions_hidden_states) shape: {actions_hidden_states.shape}")
         batch_size = actions_hidden_states.shape[0]
+        # device = actions_hidden_states.device
         rearranged_actions_hidden_states = actions_hidden_states.reshape(batch_size, NUM_ACTIONS_CHUNK, -1)
-
-        subjtrajectory_id = self.norm(rearranged_actions_hidden_states)
-        # print(f"Shape après norm : {subjtrajectory_id.shape}")
-        subjtrajectory_id = self.fc(subjtrajectory_id)
-        # print(f"Shape sortie finale (logits) : {subjtrajectory_id.shape}")
-
+        subjtrajectory_id = self.model(rearranged_actions_hidden_states)
         return subjtrajectory_id

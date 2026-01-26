@@ -186,11 +186,13 @@ def make_dataset_from_rlds(
         # print(f"ACTION keys: {n.shape}") #
         # print(f"ACTION keys: {n.keys()}") #
 
-        new_obs["cluster_id"] = old_obs["cluster_id"]
+        # new_obs["cluster_id"] = old_obs["cluster_id"]
+        cluster_id = old_obs["cluster_id"]
         traj = {
             "observation": new_obs,
             "task": task,
             "action": tf.cast(traj["action"], tf.float32),
+            "cluster_id": cluster_id,
             "dataset_name": tf.repeat(name, traj_len),
         }
 
