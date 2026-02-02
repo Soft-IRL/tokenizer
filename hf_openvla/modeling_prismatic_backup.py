@@ -16,8 +16,6 @@ import logging
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple, Union
-from prismatic.vla.subtrajectory_tokenizer import SubtrajectoryTokenizer
-
 
 import numpy as np
 import timm
@@ -562,26 +560,3 @@ class OpenVLAForActionPrediction(PrismaticForConditionalGeneration):
         """Get all the logged statistics for the given dataset."""
         unnorm_key = self._check_unnorm_key(self.norm_stats, unnorm_key)
         return self.norm_stats[unnorm_key]["action"]
-    
-    def predict_subtraj_ID(
-                self, subtrajectory_id_tokenizer: SubtrajectoryTokenizer, input_ids: Optional[torch.LongTensor] = None, unnorm_key: Optional[str] = None, **kwargs: str
-            ) -> int:
-                """Thin wrapper around .generate() that decodes predicted actions and unnormalizes them."""
-                # If the special empty token ('') does not already appear after the colon (':') token in the prompt
-                # (after "OUT:" or "ASSISTANT:"), insert it to match the inputs seen at training time
-                if not torch.all(input_ids[:, -1] == 29871):
-                    input_ids = torch.cat(
-                        (input_ids, torch.unsqueeze(torch.Tensor([29871]).long(), dim=0).to(input_ids.device)), dim=1
-                    )
-
-                max_new_tokens=1
-                # Run VLA inference
-                generated_ids = self.generate(input_ids, max_new_tokens=max_new_tokens, **kwargs)
-
-                # Extract predicted action tokens and translate into (normalized) continuous actions
-                predicted_action_token_ids = generated_ids[0, -max_new_tokens:].cpu().numpy()
-                subtrajectory_id=subtrajectory_id_tokenizer.decode_token_ids_to_actions(predicted_action_token_ids)
-
-                
-
-                return subtrajectory_id

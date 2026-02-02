@@ -24,8 +24,8 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
     """
     traj_len = tf.shape(traj["action"])[0]
     # tf.print(f"--- DEBUG: traj_len {traj_len} ---")
-    tf.print("--- DEBUG: traj_len", traj_len, "---")
-    tf.print("--- DEBUG: future_action_window_size", future_action_window_size, "---")
+    # tf.print("--- DEBUG: traj_len", traj_len, "---")
+    # tf.print("--- DEBUG: future_action_window_size", future_action_window_size, "---")
     action_dim = traj["action"].shape[-1]
     effective_traj_len = traj_len - future_action_window_size
     chunk_indices = tf.broadcast_to(tf.range(-window_size + 1, 1), [effective_traj_len, window_size]) + tf.broadcast_to(
@@ -69,7 +69,7 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
 
             # traj["observation"]["cluster_id"] = tf.gather(traj["observation"]["cluster_id"], floored_action_chunk_indices)
         cluster_ids = traj["cluster_id"]
-        tf.print("--- DEBUG: traj_CLUSTERID_AVANT", tf.shape(traj["cluster_id"]), "---")
+        # tf.print("--- DEBUG: traj_CLUSTERID_AVANT", tf.shape(traj["cluster_id"]), "---")
 
         # 1. On garde la dimension originale (pas de squeeze !)
         # cluster_ids a une forme [T, D]
@@ -91,8 +91,8 @@ def chunk_act_obs(traj: Dict, window_size: int, future_action_window_size: int =
     traj["task"] = tf.nest.map_structure(lambda x: tf.gather(x, tf.range(effective_traj_len)), traj["task"])
     traj["dataset_name"] = tf.gather(traj["dataset_name"], tf.range(effective_traj_len))
     traj["absolute_action_mask"] = tf.gather(traj["absolute_action_mask"], tf.range(effective_traj_len))
-    tf.print("--- DEBUG: traj_ACTION", tf.shape(traj["action"]), "---")
-    tf.print("--- DEBUG: traj_CLUSTERID_APRES", tf.shape(traj["cluster_id"]), "---")
+    # tf.print("--- DEBUG: traj_ACTION", tf.shape(traj["action"]), "---")
+    # tf.print("--- DEBUG: traj_CLUSTERID_APRES", tf.shape(traj["cluster_id"]), "---")
 
 
 

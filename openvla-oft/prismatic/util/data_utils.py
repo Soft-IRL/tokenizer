@@ -132,15 +132,19 @@ class PaddedCollatorForActionPrediction:
         else:
             raise ValueError(f"Unsupported `pixel_values` type = {type(pixel_values)}")
 
-        # Stack all actions
-        actions = [torch.from_numpy(np.copy(instance["actions"])) for instance in instances]
-        actions = torch.stack(actions)
+        if "actions" in instances[0]:
+            # Stack all actions
+            actions = [torch.from_numpy(np.copy(instance["actions"])) for instance in instances]
+            actions = torch.stack(actions)
+        else:
+            actions = None
 
         subtrajectory_id = None
         if "subtrajectory_id" in instances[0]:
             # On récupère les IDs, on s'assure qu'ils sont des tenseurs Long
             subtrajectory_id = [torch.tensor(instance["subtrajectory_id"], dtype=torch.long) for instance in instances]
             subtrajectory_id = torch.stack(subtrajectory_id)
+
 
         # Stack proprio
         if "proprio" in instances[0]:
